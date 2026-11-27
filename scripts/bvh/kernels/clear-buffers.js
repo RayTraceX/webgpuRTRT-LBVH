@@ -1,7 +1,7 @@
 class ClearBuffer {
 
     // shader parameters
-    WG_SIZE = 64
+    WG_SIZE = 256
 
     device = null;
 
@@ -92,30 +92,25 @@ class ClearBuffer {
         })
     }
 
-    async clear( value = 0) {
-        await this.init(value);
+    clear( value = 0) {
+        this.init(value);
     }
 
     // initialize the index array
     init( value ) {
 
-        this.device.queue.writeBuffer(
-            this.UNIFORM_BUFFER,
-            0,
-            new Uint32Array([
-                this.size,
-                value,
-                0,
-                0
-            ])
-        )
+        const totalWG = Math.ceil(this.size / this.WG_SIZE);
+        const wgX = Math.min(65535, Math.ceil(Math.sqrt(totalWG)));
+        const wgY = Math.ceil(totalWG / wgX);
+        this.device.queue.writeBuffer(this.UNIFORM_BUFFER, 0, new Uint32Array([this.size, value, wgX, 0]));
+        //console.log("this.size:", this.size);
 
         const CE = this.device.createCommandEncoder()
         const  P = CE.beginComputePass()
 
         P.setPipeline(this.PIPELINE)
         P.setBindGroup(0, this.BG)
-        P.dispatchWorkgroups(Math.ceil(this.size / this.WG_SIZE)) // / 4
+        P.dispatchWorkgroups(wgX, wgY, 1); 
         P.end()
 
         this.device.queue.submit([CE.finish()])
@@ -127,8 +122,8 @@ class ClearBuffer {
             struct Uniforms {
                 num : i32,
                 value : i32,
-                f_2 : i32,
-                f_3 : i32
+                wgX : i32,
+                padding : i32
             };
 
             @group(0) @binding(0) var<storage, read_write> buffer : array<i32>;
@@ -136,18 +131,13 @@ class ClearBuffer {
 
             // set bvh in the buffer to 0, 0, 0, ...
             @compute @workgroup_size(${this.WG_SIZE})
-            fn init_buffer(@builtin(global_invocation_id) global_id : vec3u) {
-                let idx : i32 = i32(global_id.x);
-                if (idx < uniforms.num) {
+            fn init_buffer(@builtin(workgroup_id) wid : vec3u, @builtin(local_invocation_id) lid : vec3u) { 
+            
+                let wg_flat : u32 = wid.x + wid.y * u32(uniforms.wgX);
+                let idx : u32 = wg_flat * ${this.WG_SIZE} + lid.x;
+                if (idx < u32(uniforms.num)) {
                     buffer[idx] = uniforms.value;
                 }
-
-                //for (var i : i32 = 0; i < 4; i++) {
-                //    let idx : i32 = 4 * i32(global_id.x) + i;
-                //    if (idx < uniforms.num) {
-                //        buffer[idx] = 0;
-                //    }
-                //}
             }
         `;
     }

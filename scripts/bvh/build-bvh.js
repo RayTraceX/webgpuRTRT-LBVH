@@ -39,6 +39,7 @@ class BVHTree {
     }
 
     prepare_buffers( TRI_ARRAY, NUM_TRIS, MODEL_BOUNDS ) {
+        //console.log("NUM_TRIS:",  NUM_TRIS);
         this.prepare_triangle_buffer( TRI_ARRAY, NUM_TRIS, MODEL_BOUNDS );
         this.prepare_kernel_buffers();
     }
@@ -146,7 +147,7 @@ class BVHTree {
         this.radix_tree.execute()
 
         // 0.5 ms
-        this.clear_buffer_bvh.init(0) //or await this.bvhUpPass.clear_BVH_BUFFER(); // 1.5 ms
+        this.clear_buffer_bvh.clear(0) //or await this.bvhUpPass.clear_BVH_BUFFER(); // 1.5 ms
 
         // 1.5 ms
         this.bvhUpPass.execute()
