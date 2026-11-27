@@ -71,7 +71,6 @@ class SCENE_BOUNDS {
     UNIFORM_BUFFER; //RESULT_BOUNDS;
 
     last_input;
-    levels_bindGroups = [];
     hard_reset_size(AABB_BUFFER, size) { //, bounds
 
         if (size < 0 || size > this.MAX_TRIANGLES_COUNT) { // 2.1M (max)
@@ -99,7 +98,7 @@ class SCENE_BOUNDS {
             count = groups;
         }
 
-        //const levels_bindGroups = [];
+        this.levels_bindGroups = [];
         let input = this.AABB_BUFFER;
         this.last_input = input;
         let layout = this.BG_LAYOUT;
